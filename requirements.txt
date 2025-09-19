@@ -6,3 +6,8 @@ langgraph==0.6.7
 loguru==0.7.3
 numpy==1.23.5
 python-dotenv==1.1.1
+flask_sock==0.7.0
+webrtcvad==2.0.10
+gevent==25.9.1
+gevent-websocket==0.10.1
+webrtcvad-wheels==2.0.14

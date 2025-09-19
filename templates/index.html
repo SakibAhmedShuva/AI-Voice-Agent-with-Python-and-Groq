@@ -3,315 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Math Assistant - Samantha</title>
+    <title>Samantha - Voice Math Assistant</title>
     <style>
-        /* Your original CSS remains unchanged here */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; color: #333; }
-        .container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2); backdrop-filter: blur(10px); padding: 40px; width: 90%; max-width: 600px; text-align: center; }
-        .header h1 { color: #4a5568; font-size: 2.5rem; margin-bottom: 10px; background: linear-gradient(45deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .header p { color: #718096; font-size: 1.1rem; }
-        .chat-container { background: #f7fafc; border-radius: 15px; padding: 20px; margin-bottom: 20px; min-height: 200px; max-height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; }
-        .message { margin: 10px 0; padding: 12px 16px; border-radius: 18px; max-width: 80%; word-wrap: break-word; animation: fadeIn 0.3s ease-in; }
-        .user-message { background: linear-gradient(45deg, #667eea, #764ba2); color: white; margin-left: auto; text-align: right; }
-        .bot-message { background: #e2e8f0; color: #4a5568; margin-right: auto; text-align: left; }
-        .controls { display: flex; flex-direction: column; gap: 15px; align-items: center; }
-        .record-btn { width: 80px; height: 80px; border-radius: 50%; border: none; background: linear-gradient(45deg, #ff6b6b, #ee5a24); color: white; font-size: 1.5rem; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(238, 90, 36, 0.3); }
-        .record-btn.recording { animation: pulse 1.5s infinite; }
-        .call-btn { padding: 15px 30px; border: none; border-radius: 25px; background: linear-gradient(45deg, #48bb78, #38a169); color: white; cursor: pointer; font-size: 1.2rem; transition: all 0.3s ease; }
-        .call-btn.hang-up { background: linear-gradient(45deg, #ff6b6b, #ee5a24); }
-        .text-input-container { display: flex; gap: 10px; width: 100%; }
-        .text-input { flex: 1; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 25px; font-size: 1rem; outline: none; transition: border-color 0.3s ease; }
-        .text-input:focus { border-color: #667eea; }
-        .send-btn { padding: 12px 20px; border: none; border-radius: 25px; background: linear-gradient(45deg, #667eea, #764ba2); color: white; cursor: pointer; font-size: 1rem; transition: all 0.3s ease; }
-        .status { padding: 10px; border-radius: 8px; margin: 10px 0; font-weight: 500; }
-        .mode-toggle { margin-bottom: 20px; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        body { font-family: Arial, sans-serif; text-align: center; }
+        button { margin: 10px; padding: 10px 20px; }
+        #status { color: red; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Samantha</h1>
-            <p>Your friendly voice math assistant</p>
-        </div>
+    <h1>Samantha</h1>
+    <p>Your friendly voice math assistant</p>
 
-        <div class="mode-toggle">
-            <label for="mode">Mode:</label>
-            <select id="modeSelector">
-                <option value="manual" selected>Manual (Push-to-Talk / Text)</option>
-                <option value="call">Continuous Call</option>
-            </select>
-        </div>
-
-        <div class="chat-container" id="chatContainer"></div>
-        <div class="status" id="status" style="display: none;"></div>
-
-        <div id="manualControls" class="controls">
-             <button class="record-btn" id="recordBtn" title="Click and hold to record"></button>
-            <div class="text-input-container">
-                <input type="text" class="text-input" id="textInput" placeholder="Type your math question...">
-                <button class="send-btn" id="sendBtn">Send</button>
-            </div>
-        </div>
-
-        <div id="callControls" class="controls" style="display: none;">
-            <button class="call-btn" id="callBtn">Start Call</button>
-        </div>
+    <div>
+        <label>Mode:</label>
+        <select id="modeSelect">
+            <option value="manual">Manual (Push-to-Talk / Text)</option>
+            <option value="continuous">Continuous Call</option>
+        </select>
     </div>
 
+    <div id="manualMode" style="display: block;">
+        <button id="startRecording">Start Recording</button>
+        <button id="stopRecording" style="display: none;">Stop Recording</button>
+        <p id="manualStatus">Press "Start Recording" to begin, speak, then "Stop Recording" to send.</p>
+    </div>
+
+    <div id="continuousMode" style="display: none;">
+        <button id="startCall">Start Call</button>
+        <button id="endCall" style="display: none;">End Call</button>
+        <p id="callStatus">Press "Start Call" to begin continuous conversation.</p>
+    </div>
+
+    <p id="status"></p>
+
     <script>
-        // --- Element References ---
-        const modeSelector = document.getElementById('modeSelector');
-        const manualControls = document.getElementById('manualControls');
-        const callControls = document.getElementById('callControls');
-        const chatContainer = document.getElementById('chatContainer');
-        const statusDiv = document.getElementById('status');
-        
-        // --- Manual Mode Elements ---
-        const recordBtn = document.getElementById('recordBtn');
-        const textInput = document.getElementById('textInput');
-        const sendBtn = document.getElementById('sendBtn');
-        
-        // --- Call Mode Elements ---
-        const callBtn = document.getElementById('callBtn');
-        
-        // --- State Variables ---
-        let currentMode = 'manual';
-        
-        // --- Utility Functions ---
-        function addMessage(content, isUser = false) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-            messageDiv.textContent = content;
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
+        // Mode switcher
+        const modeSelect = document.getElementById('modeSelect');
+        const manualMode = document.getElementById('manualMode');
+        const continuousMode = document.getElementById('continuousMode');
+        const status = document.getElementById('status');
 
-        function showStatus(message, type = 'info', isPermanent = false) {
-            statusDiv.textContent = message;
-            statusDiv.className = `status ${type}`;
-            statusDiv.style.display = 'block';
-            
-            if (!isPermanent) {
-                setTimeout(() => { statusDiv.style.display = 'none'; }, 4000);
-            }
-        }
-
-        // --- Mode Switching ---
-        modeSelector.addEventListener('change', (e) => {
-            currentMode = e.target.value;
-            if (currentMode === 'manual') {
-                manualControls.style.display = 'flex';
-                callControls.style.display = 'none';
-                if (isCallActive) hangUp();
+        modeSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'manual') {
+                manualMode.style.display = 'block';
+                continuousMode.style.display = 'none';
             } else {
-                manualControls.style.display = 'none';
-                callControls.style.display = 'block';
+                manualMode.style.display = 'none';
+                continuousMode.style.display = 'block';
             }
-            chatContainer.innerHTML = ''; // Clear chat on mode switch
-            addMessage("Hi! I'm Samantha. How can I help with your math questions today?");
         });
 
-        // --- Initial Message ---
-        addMessage("Hi! I'm Samantha. How can I help with your math questions today?");
+        // Manual Mode (Push-to-Talk)
+        let mediaRecorderManual;
+        let audioChunksManual = [];
+        const startRecordingBtn = document.getElementById('startRecording');
+        const stopRecordingBtn = document.getElementById('stopRecording');
+        const manualStatus = document.getElementById('manualStatus');
 
-        // ===================================================
-        // MANUAL MODE LOGIC (Push-to-Talk and Text)
-        // ===================================================
-        let manualMediaRecorder;
-        let manualAudioChunks = [];
-        let isManualRecording = false;
-
-        recordBtn.addEventListener('mousedown', startManualRecording);
-        recordBtn.addEventListener('mouseup', stopManualRecording);
-        recordBtn.addEventListener('mouseleave', stopManualRecording);
-        
-        sendBtn.onclick = sendTextMessage;
-        textInput.onkeypress = (e) => { if (e.key === 'Enter') sendTextMessage(); };
-
-        async function startManualRecording() {
+        startRecordingBtn.addEventListener('click', async () => {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                manualMediaRecorder = new MediaRecorder(stream);
-                manualAudioChunks = [];
-                manualMediaRecorder.ondataavailable = e => manualAudioChunks.push(e.data);
-                manualMediaRecorder.onstop = processManualRecording;
-                manualMediaRecorder.start();
-                recordBtn.classList.add('recording');
-                showStatus('Recording...', 'info', true);
-            } catch (error) {
-                showStatus('Microphone access denied.', 'error', true);
-            }
-        }
-        
-        function stopManualRecording() {
-            if (!manualMediaRecorder) return;
-            manualMediaRecorder.stop();
-            recordBtn.classList.remove('recording');
-            showStatus('Processing voice...', 'info');
-        }
-
-        async function processManualRecording() {
-            const audioBlob = new Blob(manualAudioChunks, { type: 'audio/webm' });
-            const formData = new FormData();
-            formData.append('audio', audioBlob, 'recording.webm');
-            
-            try {
-                const response = await fetch('/voice-chat-legacy', { method: 'POST', body: formData });
-                if (!response.ok) throw new Error((await response.json()).error || 'Voice processing failed');
-                
-                const transcript = response.headers.get('X-Transcript');
-                addMessage(transcript, true);
-
-                const audioBlobResponse = await response.blob();
-                const audioUrl = URL.createObjectURL(audioBlobResponse);
-                new Audio(audioUrl).play();
-                showStatus('Response received!', 'success');
-            } catch (error) {
-                showStatus(`Error: ${error.message}`, 'error');
-            }
-        }
-        
-        async function sendTextMessage() {
-            const message = textInput.value.trim();
-            if (!message) return;
-            
-            addMessage(message, true);
-            textInput.value = '';
-            showStatus('Thinking...', 'info');
-            
-            try {
-                const chatResponse = await fetch('/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message })
+                console.log('Microphone access granted');
+                mediaRecorderManual = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+                mediaRecorderManual.start();
+                startRecordingBtn.style.display = 'none';
+                stopRecordingBtn.style.display = 'block';
+                audioChunksManual = [];
+                mediaRecorderManual.addEventListener('dataavailable', event => {
+                    console.log('Audio chunk received:', event.data.size, 'bytes');
+                    audioChunksManual.push(event.data);
                 });
-                if (!chatResponse.ok) throw new Error((await chatResponse.json()).error || 'Chat failed');
-                
-                const { response: responseText } = await chatResponse.json();
-                addMessage(responseText, false);
+                mediaRecorderManual.onerror = (event) => {
+                    console.error('MediaRecorder error:', event.error);
+                    manualStatus.textContent = 'Recording error. Try again.';
+                };
+                manualStatus.textContent = 'Recording... Speak now.';
+            } catch (err) {
+                console.error('Microphone access error:', err);
+                manualStatus.textContent = 'Could not access microphone. Check permissions.';
+                status.textContent = 'Mic error: ' + err.message;
+            }
+        });
 
-                const ttsResponse = await fetch('/synthesize', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: responseText })
-                });
-                if (ttsResponse.ok) {
-                    const audioBlob = await ttsResponse.blob();
-                    new Audio(URL.createObjectURL(audioBlob)).play();
+        stopRecordingBtn.addEventListener('click', () => {
+            mediaRecorderManual.stop();
+            startRecordingBtn.style.display = 'block';
+            stopRecordingBtn.style.display = 'none';
+            manualStatus.textContent = 'Processing...';
+            mediaRecorderManual.addEventListener('stop', () => {
+                const audioBlob = new Blob(audioChunksManual, { type: 'audio/webm' });
+                console.log('Recording stopped, blob size:', audioBlob.size);
+                if (audioBlob.size < 500) {
+                    manualStatus.textContent = 'Recording too short or empty. Try again.';
+                    status.textContent = 'Error: Recording too short (<500 bytes)';
+                    return;
                 }
-                showStatus('Response received!', 'success');
-            } catch (error) {
-                showStatus(`Error: ${error.message}`, 'error');
-            }
-        }
-
-
-        // ===================================================
-        // CONTINUOUS CALL MODE LOGIC (WebSockets)
-        // ===================================================
-        let socket;
-        let audioContext;
-        let processor;
-        let source;
-        let isCallActive = false;
-        let audioQueue = [];
-        let isPlaying = false;
-        const TARGET_SAMPLE_RATE = 16000;
-
-        callBtn.onclick = () => { isCallActive ? hangUp() : startCall(); };
-        
-        async function startCall() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                
-                processor = audioContext.createScriptProcessor(4096, 1, 1);
-                processor.onaudioprocess = (e) => {
-                    const inputData = e.inputBuffer.getChannelData(0);
-                    const resampledData = resample(inputData, audioContext.sampleRate, TARGET_SAMPLE_RATE);
-                    if (socket && socket.readyState === WebSocket.OPEN) socket.send(resampledData);
-                };
-
-                source = audioContext.createMediaStreamSource(stream);
-                source.connect(processor);
-                processor.connect(audioContext.destination);
-
-                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                socket = new WebSocket(`${wsProtocol}//${window.location.host}/voice`);
-                
-                socket.onopen = () => {
-                    showStatus('Connected. You can start speaking.', 'info', true);
-                    isCallActive = true;
-                    callBtn.textContent = 'Hang Up';
-                    callBtn.classList.add('hang-up');
-                };
-                
-                socket.onmessage = (event) => {
-                    if (typeof event.data === 'string') {
-                        const message = JSON.parse(event.data);
-                        if (message.type === 'user_transcript') addMessage(message.data, true);
-                        else if (message.type === 'bot_response_text') addMessage(message.data, false);
-                        else if (message.type === 'error') showStatus(message.data, 'error', true);
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'recording.webm');
+                fetch('/voice-chat-legacy', {
+                    method: 'POST',
+                    body: formData
+                }).then(response => {
+                    if (response.ok) {
+                        manualStatus.textContent = 'Response received. Playing audio...';
+                        response.blob().then(blob => {
+                            const url = URL.createObjectURL(blob);
+                            new Audio(url).play();
+                        });
                     } else {
-                        const audioBlob = new Blob([event.data], { type: 'audio/mpeg' });
-                        audioQueue.push(URL.createObjectURL(audioBlob));
-                        if (!isPlaying) playNextInQueue();
+                        manualStatus.textContent = 'Upload failed. Try again.';
+                        status.textContent = 'Error: Upload failed';
+                    }
+                }).catch(err => {
+                    console.error('Fetch error:', err);
+                    manualStatus.textContent = 'Error sending recording.';
+                    status.textContent = 'Error: ' + err.message;
+                });
+            });
+        });
+
+        // Continuous Mode (WebSocket)
+        let ws;
+        let mediaRecorderContinuous;
+        let streamContinuous;
+        const startCallBtn = document.getElementById('startCall');
+        const endCallBtn = document.getElementById('endCall');
+        const callStatus = document.getElementById('callStatus');
+
+        startCallBtn.addEventListener('click', async () => {
+            try {
+                streamContinuous = await navigator.mediaDevices.getUserMedia({ audio: true });
+                console.log('Microphone access granted for continuous mode');
+                status.textContent = '';
+                ws = new WebSocket('ws://localhost:5000/voice');  // Adjust if deployed
+
+                ws.onopen = () => {
+                    console.log('WebSocket connected');
+                    callStatus.textContent = 'Connected. Speak freely...';
+                    startCallBtn.style.display = 'none';
+                    endCallBtn.style.display = 'block';
+                    try {
+                        mediaRecorderContinuous = new MediaRecorder(streamContinuous, { 
+                            mimeType: 'audio/webm;codecs=opus',
+                            audioBitsPerSecond: 16000
+                        });
+                        mediaRecorderContinuous.start(250);  // Send chunks every 250ms
+                        mediaRecorderContinuous.ondataavailable = event => {
+                            if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+                                console.log('Sending audio chunk:', event.data.size, 'bytes');
+                                ws.send(event.data);  // Send binary blob
+                            } else {
+                                console.warn('Empty chunk or WS closed, skipping');
+                            }
+                        };
+                        mediaRecorderContinuous.onerror = (event) => {
+                            console.error('MediaRecorder error:', event.error);
+                            callStatus.textContent = 'Recording error. Try again.';
+                            status.textContent = 'MediaRecorder error: ' + event.error.message;
+                        };
+                    } catch (err) {
+                        console.error('MediaRecorder setup error:', err);
+                        callStatus.textContent = 'Failed to start recording.';
+                        status.textContent = 'MediaRecorder error: ' + err.message;
+                        ws.close();
                     }
                 };
-                
-                socket.onclose = () => { showStatus('Connection lost.', 'error', true); hangUp(); };
-                socket.onerror = () => { showStatus('Connection error.', 'error', true); hangUp(); };
-            } catch (error) {
-                showStatus('Microphone access denied.', 'error', true);
-            }
-        }
-        
-        function hangUp() {
-            if (processor) processor.disconnect();
-            if (source) source.disconnect();
-            if (audioContext && audioContext.state !== 'closed') audioContext.close();
-            if (socket) socket.close();
-            isCallActive = isPlaying = false;
-            audioQueue = [];
-            callBtn.textContent = 'Start Call';
-            callBtn.classList.remove('hang-up');
-            showStatus('Call ended.', 'info');
-        }
 
-        function playNextInQueue() {
-            if (audioQueue.length > 0) {
-                isPlaying = true;
-                const audioUrl = audioQueue.shift();
-                const audio = new Audio(audioUrl);
-                showStatus('Speaking...', 'info', true);
-                audio.play();
-                audio.onended = () => { isPlaying = false; playNextInQueue(); };
-            } else {
-                showStatus('Listening...', 'info', true);
+                ws.onmessage = event => {
+                    if (event.data instanceof Blob) {
+                        console.log('Received audio response:', event.data.size, 'bytes');
+                        const url = URL.createObjectURL(event.data);
+                        new Audio(url).play();
+                    } else {
+                        try {
+                            const msg = JSON.parse(event.data);
+                            console.log('Received JSON:', msg);
+                            if (msg.type === 'user_transcript') {
+                                console.log('User said:', msg.data);
+                            } else if (msg.type === 'bot_response_text') {
+                                console.log('Bot response:', msg.data);
+                            } else if (msg.type === 'error') {
+                                callStatus.textContent = 'Error: ' + msg.data;
+                                status.textContent = 'Server error: ' + msg.data;
+                            } else if (msg.type === 'connected') {
+                                console.log('Server ready:', msg.data);
+                            }
+                        } catch (e) {
+                            console.log('Received non-JSON:', event.data);
+                        }
+                    }
+                };
+
+                ws.onclose = event => {
+                    console.log(`WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`);
+                    callStatus.textContent = 'Call ended.';
+                    status.textContent = `Closed with code ${event.code}: ${event.reason || 'No reason provided'}`;
+                    if (mediaRecorderContinuous) mediaRecorderContinuous.stop();
+                    if (streamContinuous) streamContinuous.getTracks().forEach(track => track.stop());
+                    startCallBtn.style.display = 'block';
+                    endCallBtn.style.display = 'none';
+                };
+
+                ws.onerror = err => {
+                    console.error('WebSocket error:', err);
+                    callStatus.textContent = 'WebSocket error. Try again.';
+                    status.textContent = 'WebSocket error';
+                };
+            } catch (err) {
+                console.error('Mic/WS setup error:', err);
+                callStatus.textContent = 'Failed to start call. Check mic permissions.';
+                status.textContent = 'Error: ' + err.message;
             }
-        }
-        
-        function resample(audioBuffer, fromSampleRate, toSampleRate) {
-            const ratio = toSampleRate / fromSampleRate;
-            const newLength = Math.round(audioBuffer.length * ratio);
-            const result = new Int16Array(newLength);
-            let offsetResult = 0, offsetBuffer = 0;
-            while (offsetResult < newLength) {
-                const nextOffsetBuffer = Math.round((offsetResult + 1) / ratio);
-                let accum = 0, count = 0;
-                for (let i = offsetBuffer; i < nextOffsetBuffer && i < audioBuffer.length; i++) {
-                    accum += audioBuffer[i];
-                    count++;
-                }
-                result[offsetResult] = Math.min(1, accum / count) * 32767;
-                offsetResult++;
-                offsetBuffer = nextOffsetBuffer;
+        });
+
+        endCallBtn.addEventListener('click', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close(1000, 'User ended call');
             }
-            return result.buffer;
-        }
+            callStatus.textContent = 'Call ended.';
+            status.textContent = 'Call ended by user';
+            if (mediaRecorderContinuous) mediaRecorderContinuous.stop();
+            if (streamContinuous) streamContinuous.getTracks().forEach(track => track.stop());
+            startCallBtn.style.display = 'block';
+            endCallBtn.style.display = 'none';
+        });
     </script>
 </body>
 </html>

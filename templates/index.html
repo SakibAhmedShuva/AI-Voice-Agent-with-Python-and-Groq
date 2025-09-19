@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Math Assistant - Samantha</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+        }
+        
+        .header {
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #4a5568;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header p {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+        
+        .chat-container {
+            background: #f7fafc;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .message {
+            margin: 10px 0;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 80%;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        .user-message {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        
+        .bot-message {
+            background: #e2e8f0;
+            color: #4a5568;
+            margin-right: auto;
+            text-align: left;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .voice-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .record-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(238, 90, 36, 0.3);
+        }
+        
+        .record-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(238, 90, 36, 0.4);
+        }
+        
+        .record-btn.recording {
+            background: linear-gradient(45deg, #ff3838, #c23616);
+            animation: pulse 1.5s infinite;
+        }
+        
+        .record-btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .text-input-container {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+        
+        .text-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+        
+        .text-input:focus {
+            border-color: #667eea;
+        }
+        
+        .send-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .send-btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .status.info {
+            background: #ebf8ff;
+            color: #2b6cb0;
+            border: 1px solid #90cdf4;
+        }
+        
+        .status.error {
+            background: #fed7d7;
+            color: #c53030;
+            border: 1px solid #feb2b2;
+        }
+        
+        .status.success {
+            background: #f0fff4;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+        
+        .volume-indicator {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.2s ease;
+        }
+        
+        .volume-indicator.active {
+            background: linear-gradient(45deg, #48bb78, #38a169);
+            color: white;
+            transform: scale(1.1);
+        }
+        
+        .examples {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .examples h3 {
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .examples p {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .voice-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .text-input-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Samantha</h1>
+            <p>Your friendly voice math assistant</p>
+        </div>
+        
+        <div class="chat-container" id="chatContainer">
+            <div class="message bot-message">
+                Hi! I'm Samantha, your math assistant. Ask me to add or multiply numbers, either by typing or using your voice!
+            </div>
+        </div>
+        
+        <div class="status" id="status" style="display: none;"></div>
+        
+        <div class="controls">
+            <div class="voice-controls">
+                <div class="volume-indicator" id="volumeIndicator"></div>
+                <button class="record-btn" id="recordBtn" title="Click and hold to record"></button>
+                <div id="recordingStatus"></div>
+            </div>
+            
+            <div class="text-input-container">
+                <input type="text" class="text-input" id="textInput" placeholder="Type your math question..." onkeypress="handleKeyPress(event)">
+                <button class="send-btn" id="sendBtn" onclick="sendTextMessage()">Send</button>
+            </div>
+        </div>
+        
+        <div class="examples">
+            <h3>Try asking:</h3>
+            <p>"What's 15 plus 27?"</p>
+            <p>"Multiply 8 times 6"</p>
+            <p>"Add 100 and 50 together"</p>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        
+        const recordBtn = document.getElementById('recordBtn');
+        const textInput = document.getElementById('textInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const chatContainer = document.getElementById('chatContainer');
+        const status = document.getElementById('status');
+        const volumeIndicator = document.getElementById('volumeIndicator');
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            checkMicrophonePermission();
+        });
+        
+        async function checkMicrophonePermission() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop());
+                showStatus('Microphone ready! Click and hold the record button to speak.', 'success');
+            } catch (error) {
+                showStatus('Microphone access denied. You can still use text input.', 'error');
+                recordBtn.disabled = true;
+            }
+        }
+        
+        function showStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            
+            if (type !== 'error') {
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 3000);
+            }
+        }
+        
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            messageDiv.textContent = content;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        recordBtn.addEventListener('mousedown', startRecording);
+        recordBtn.addEventListener('mouseup', stopRecording);
+        recordBtn.addEventListener('mouseleave', stopRecording);
+        
+        recordBtn.addEventListener('touchstart', startRecording);
+        recordBtn.addEventListener('touchend', stopRecording);
+        
+        async function startRecording() {
+            if (isRecording) return;
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = processRecording;
+                
+                mediaRecorder.start();
+                isRecording = true;
+                recordBtn.classList.add('recording');
+                volumeIndicator.classList.add('active');
+                showStatus('Recording... Release to send', 'info');
+                
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                showStatus('Failed to start recording. Please check microphone permissions.', 'error');
+            }
+        }
+        
+        function stopRecording() {
+            if (!isRecording || !mediaRecorder) return;
+            
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            isRecording = false;
+            recordBtn.classList.remove('recording');
+            volumeIndicator.classList.remove('active');
+            showStatus('Processing voice message...', 'info');
+        }
+        
+        async function processRecording() {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.webm');
+            
+            try {
+                showStatus('Processing your voice message...', 'info');
+                
+                const response = await fetch('/voice-chat', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Voice processing failed');
+                }
+                
+                // CHANGED: Get transcript and agent response from headers
+                const transcript = response.headers.get('X-Transcript') || 'Your voice message';
+                const agentResponse = response.headers.get('X-Agent-Response') || 'Sorry, I had trouble responding.';
+                
+                addMessage(transcript, true);
+                addMessage(agentResponse, false);
+                
+                // Play the audio response
+                const audioBlobResponse = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlobResponse);
+                const audio = new Audio(audioUrl);
+                
+                audio.onloadeddata = () => {
+                    showStatus('Playing response...', 'success');
+                    audio.play();
+                };
+                
+                audio.onended = () => {
+                    URL.revokeObjectURL(audioUrl);
+                    showStatus('Ready for next question!', 'success');
+                };
+                
+                audio.onerror = () => {
+                    showStatus('Error playing audio response', 'error');
+                };
+                
+            } catch (error) {
+                console.error('Error processing voice:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendTextMessage();
+            }
+        }
+        
+        async function sendTextMessage() {
+            const message = textInput.value.trim();
+            if (!message) return;
+            
+            addMessage(message, true);
+            textInput.value = '';
+            textInput.disabled = true;
+            sendBtn.disabled = true;
+            
+            showStatus('Processing your message...', 'info');
+            
+            try {
+                const chatResponse = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                if (!chatResponse.ok) {
+                    const errorData = await chatResponse.json();
+                    throw new Error(errorData.error || 'Chat processing failed');
+                }
+                
+                const chatData = await chatResponse.json();
+                addMessage(chatData.response, false);
+                
+                synthesizeResponse(chatData.response);
+                
+                showStatus('Message processed successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+                addMessage('Sorry, I encountered an error processing your message.', false);
+            } finally {
+                textInput.disabled = false;
+                sendBtn.disabled = false;
+                textInput.focus();
+            }
+        }
+        
+        async function synthesizeResponse(text) {
+            try {
+                const response = await fetch('/synthesize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                if (response.ok) {
+                    const audioBlob = await response.blob();
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = new Audio(audioUrl);
+                    
+                    audio.onended = () => {
+                        URL.revokeObjectURL(audioUrl);
+                    };
+                    
+                    audio.play();
+                }
+            } catch (error) {
+                console.log('TTS not available:', error);
+            }
+        }
+        
+        async function checkHealth() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                console.log('App status:', data);
+            } catch (error) {
+                console.error('Health check failed:', error);
+            }
+        }
+        
+        checkHealth();
+    </script>
+</body>
+</html>

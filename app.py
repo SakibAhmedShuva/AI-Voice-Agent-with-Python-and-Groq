@@ -1,8 +1,12 @@
 import os
 import wave
 from io import BytesIO
-import threading
 import tempfile
+
+# ADDED: Import gevent and apply monkey-patching at the very top
+from gevent import monkey
+monkey.patch_all()
+import gevent
 
 from dotenv import load_dotenv
 from flask import Flask, render_template, jsonify, request, send_file, Response
@@ -42,7 +46,6 @@ SAMPLE_RATE = 16000
 FRAME_DURATION_MS = 30
 FRAME_SIZE = int(SAMPLE_RATE * FRAME_DURATION_MS / 1000)
 
-# --- WebSocket Class for Continuous Conversation ---
 class AudioProcessor:
     def __init__(self, ws):
         self.ws = ws
@@ -75,7 +78,8 @@ class AudioProcessor:
         self.is_speaking = False
         self.silent_frames_count = 0
         if len(self.speech_buffer) > SAMPLE_RATE:
-            threading.Thread(target=self.process_and_respond, args=(self.speech_buffer,)).start()
+            # CHANGED: Use gevent.spawn instead of threading.Thread
+            gevent.spawn(self.process_and_respond, self.speech_buffer)
         self.speech_buffer = bytearray()
 
     def process_and_respond(self, audio_data):
@@ -95,7 +99,10 @@ class AudioProcessor:
                 response_format="text",
             )
             logger.info(f'👂 Transcribed: "{transcript}"')
-            self.ws.send(f'{{"type": "user_transcript", "data": "{transcript}"}}')
+            
+            # Use gevent-websocket safe way to send
+            if not self.ws.closed:
+                self.ws.send(f'{{"type": "user_transcript", "data": "{transcript}"}}')
 
             agent_response = agent.invoke(
                 {"messages": [{"role": "user", "content": transcript}]},
@@ -103,7 +110,8 @@ class AudioProcessor:
             )
             response_text = agent_response["messages"][-1].content
             logger.info(f'🤖 Agent response: "{response_text}"')
-            self.ws.send(f'{{"type": "bot_response_text", "data": "{response_text}"}}')
+            if not self.ws.closed:
+                self.ws.send(f'{{"type": "bot_response_text", "data": "{response_text}"}}')
             
             tts_response = groq_client.audio.speech.create(
                 model=os.getenv("TTS_MODEL", "tts-1"),
@@ -113,12 +121,13 @@ class AudioProcessor:
             )
             audio_bytes = tts_response.read()
             logger.info("🎵 Speech generated, sending to client.")
-            self.ws.send(audio_bytes)
+            if not self.ws.closed:
+                self.ws.send(audio_bytes)
         except Exception as e:
             logger.error(f"❌ Error in processing thread: {e}")
-            self.ws.send(f'{{"type": "error", "data": "Sorry, I encountered an error."}}')
+            if not self.ws.closed:
+                self.ws.send(f'{{"type": "error", "data": "Sorry, I encountered an error."}}')
 
-# --- Main App Routes ---
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -127,16 +136,16 @@ def index():
 def health_check():
     return jsonify({'status': 'healthy', 'agent': os.getenv("AGENT_NAME", "Samantha")})
 
-# --- WebSocket Route for Continuous Call Mode ---
 @sock.route('/voice')
 def voice(ws):
     logger.info("🟢 WebSocket connection established.")
     processor = AudioProcessor(ws)
     try:
-        while True:
-            data = ws.receive()
-            if isinstance(data, bytes):
+        while not ws.closed:
+            data = ws.receive(timeout=0.1) # Use timeout to prevent blocking
+            if data and isinstance(data, bytes):
                 processor.process_audio(data)
+            gevent.sleep(0.01) # Yield control to other greenlets
     except Exception as e:
         logger.error(f"🔴 WebSocket error: {e}")
     finally:
@@ -214,7 +223,6 @@ def synthesize_speech():
         logger.error(f"❌ TTS error (HTTP): {str(e)}")
         return jsonify({'error': f'Speech synthesis failed: {str(e)}'}), 500
 
-# This combined endpoint is for the push-to-talk mode
 @app.route('/voice-chat-legacy', methods=['POST'])
 def voice_chat_legacy():
     try:
@@ -250,7 +258,7 @@ def voice_chat_legacy():
         audio_bytes = tts_response.read()
         
         response = Response(BytesIO(audio_bytes), mimetype='audio/mpeg')
-        response.headers['X-Transcript'] = transcript # Send back transcript for UI
+        response.headers['X-Transcript'] = transcript
         
         logger.info("✅ Voice chat completed successfully (HTTP)")
         return response
